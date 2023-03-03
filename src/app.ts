@@ -2,6 +2,8 @@ import express from "express";
 import { prisma } from "../prisma/prisma-instance";
 import { errorHandleMiddleware } from "./error-handler";
 import "express-async-errors";
+import { checkBodyKeys, typeValidations } from "./misc";
+import { Dog } from "@prisma/client";
 
 const app = express();
 app.use(express.json());
@@ -50,37 +52,18 @@ app.get("/dogs/:id", async (req, res) => {
 
 // * Create dog
 app.post("/dogs", async (req, res) => {
-  const body = {
+  const body: Dog = {
     ...req.body,
   };
 
-  const errors: string[] = [];
+  let errors: string[] = [];
 
-  for (const key of Object.keys(body)) {
-    if (
-      !["age", "description", "breed", "name"].includes(key)
-    ) {
-      errors.push(`'${key}' is not a valid key`);
-    }
-  }
+  errors = checkBodyKeys(body);
 
-  if (typeof body.age !== "number") {
-    errors.push("age should be a number");
-  }
+  errors = [...errors, ...typeValidations(errors, body)];
 
-  if (typeof body.description !== "string") {
-    errors.push("description should be a string");
-  }
-
-  if (typeof body.name !== "string") {
-    errors.push("name should be a string");
-  }
-
-  if (errors.length !== 0) {
-    console.log(errors);
-
+  if (errors.length !== 0)
     return res.status(400).send({ errors });
-  }
 
   try {
     const dog = await prisma.dog.create({
@@ -103,21 +86,12 @@ app.patch("/dogs/:id", async (req, res) => {
       .send({ error: "There was an error" });
   }
 
-  const errors: string[] = [];
+  let errors: string[] = [];
 
-  for (const key of Object.keys(body)) {
-    if (
-      !["age", "description", "breed", "name"].includes(key)
-    ) {
-      errors.push(`'${key}' is not a valid key`);
-    }
-  }
+  errors = [...errors, ...checkBodyKeys(body)];
 
-  if (errors.length !== 0) {
-    console.log(errors);
-
+  if (errors.length !== 0)
     return res.status(400).send({ errors });
-  }
 
   try {
     const dog = await prisma.dog.update({

@@ -1,0 +1,6 @@
+I know this is just vanilla express.
+- this can be done much better with much more middleware, routes, controllers, etc...
+- This is for the purpose of practice and how a student would attempt to do the assignment.
+;)
+
+https://github.com/mikesz88/express-assignment-1-ts-solved
