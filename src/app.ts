@@ -7,8 +7,13 @@ const app = express();
 app.use(express.json());
 // All code should go below this line
 
+// * Example
+app.get("/", (_req, res) => {
+  res.json({ message: "Hello World!" }).status(200); // the 'status' is unnecessary but wanted to show you how to define a status
+});
+
 // * Index
-app.get("/dogs", async (req, res) => {
+app.get("/dogs", async (_req, res) => {
   const dogs = await prisma.dog.findMany();
   if (!dogs) {
     return res
@@ -21,7 +26,13 @@ app.get("/dogs", async (req, res) => {
 
 // * Show Specific Dog
 app.get("/dogs/:id", async (req, res) => {
+  if (!+req.params.id) {
+    return res
+      .status(400)
+      .send({ message: "id should be a number" });
+  }
   const id = +req.params.id;
+
   const dog = await prisma.dog.findUnique({
     where: {
       id,
@@ -30,8 +41,8 @@ app.get("/dogs/:id", async (req, res) => {
 
   if (!dog) {
     return res
-      .status(400)
-      .send({ error: "There was an error" });
+      .status(204)
+      .send({ error: "Dog does not exist" });
   }
 
   return res.status(200).send(dog);
@@ -39,12 +50,36 @@ app.get("/dogs/:id", async (req, res) => {
 
 // * Create dog
 app.post("/dogs", async (req, res) => {
-  const body = req.body;
+  const body = {
+    ...req.body,
+  };
 
-  if (!body) {
-    return res
-      .status(400)
-      .send({ error: "There was an error" });
+  const errors: string[] = [];
+
+  for (const key of Object.keys(body)) {
+    if (
+      !["age", "description", "breed", "name"].includes(key)
+    ) {
+      errors.push(`'${key}' is not a valid key`);
+    }
+  }
+
+  if (typeof body.age !== "number") {
+    errors.push("age should be a number");
+  }
+
+  if (typeof body.description !== "string") {
+    errors.push("description should be a string");
+  }
+
+  if (typeof body.name !== "string") {
+    errors.push("name should be a string");
+  }
+
+  if (errors.length !== 0) {
+    console.log(errors);
+
+    return res.status(400).send({ errors });
   }
 
   try {
@@ -53,9 +88,7 @@ app.post("/dogs", async (req, res) => {
     });
     return res.status(201).send(dog);
   } catch (error) {
-    return res
-      .status(400)
-      .send({ errorMessage: "There was an error", error });
+    return res.status(400).send(error);
   }
 });
 
@@ -70,6 +103,22 @@ app.patch("/dogs/:id", async (req, res) => {
       .send({ error: "There was an error" });
   }
 
+  const errors: string[] = [];
+
+  for (const key of Object.keys(body)) {
+    if (
+      !["age", "description", "breed", "name"].includes(key)
+    ) {
+      errors.push(`'${key}' is not a valid key`);
+    }
+  }
+
+  if (errors.length !== 0) {
+    console.log(errors);
+
+    return res.status(400).send({ errors });
+  }
+
   try {
     const dog = await prisma.dog.update({
       where: {
@@ -79,7 +128,7 @@ app.patch("/dogs/:id", async (req, res) => {
         ...body,
       },
     });
-    res.status(200).send(dog);
+    res.status(201).send(dog);
   } catch (error) {
     res
       .status(400)
@@ -90,21 +139,19 @@ app.patch("/dogs/:id", async (req, res) => {
 // * Delete Dog
 app.delete("/dogs/:id", async (req, res) => {
   const id = +req.params.id;
-  const dog = await prisma.dog.delete({
-    where: {
-      id,
-    },
-  });
 
-  if (!dog) {
-    return res
-      .status(400)
-      .send({ error: "There was an error" });
+  try {
+    const dog = await prisma.dog.delete({
+      where: {
+        id,
+      },
+    });
+    return res.status(200).send(dog);
+  } catch (error) {
+    res
+      .status(204)
+      .send({ error: "There was no dog found" });
   }
-
-  return res
-    .status(200)
-    .send({ message: "The dog has been deleted" });
 });
 
 // all your code should go above this line
